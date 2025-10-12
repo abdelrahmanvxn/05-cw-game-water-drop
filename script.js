@@ -24,8 +24,8 @@ let timer = document.getElementById("timer");
 // Update score bar when score changes
 function updateScoreBar() {
   const scoreValue = parseInt(score.innerText);
-  // Assume max score for bar is 30 for demo, can be adjusted
-  const maxScore = 30;
+  // Winning score is now 25
+  const maxScore = 25;
   const percent = Math.min(100, Math.round((scoreValue / maxScore) * 100));
   document.getElementById('score-bar-fill').style.width = percent + '%';
   document.getElementById('score-bar-label').innerText = percent + '%';
@@ -71,6 +71,19 @@ gameContainer.addEventListener("touchend", function() {
 function resetGame() {
   // Stop any running intervals
   gameRunning = false;
+let gameContainer = document.getElementById("game-container");
+const IS_MOBILE = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 600;
+const DROP_INTERVAL = IS_MOBILE ? 450 : 350;
+const MAX_BALLS = IS_MOBILE ? 7 : 15;
+const DROP_SIZE = IS_MOBILE ? 56 : 64;
+const DROP_MIN_MULT = 0.95;
+const DROP_MAX_MULT = IS_MOBILE ? 1.12 : 1.18;
+const DROP_SPEED_MIN = IS_MOBILE ? 1.5 : 1.0;
+const DROP_SPEED_MAX = IS_MOBILE ? 3.2 : 2.0;
+const BOMB_CHANCE = 0.17;
+const BAD_DROP_CLASS = "bad-drop";
+const WATER_DROP_CLASS = "water-drop";
+const BOMB_DROP_CLASS = "bomb-drop";
   if (dropMaker) {
     clearInterval(dropMaker);
     dropMaker = null;
@@ -104,7 +117,7 @@ function startGame() {
   gameRunning = true;
 
   // Create new drops every second (1000 milliseconds)
-  dropMaker = setInterval(createDrop, 1000);
+  dropMaker = setInterval(createDrop, 600);
 
   // Set initial score
   setScore("0");
@@ -135,7 +148,7 @@ function startGame() {
       // Show winning or try again message
       const finalScore = parseInt(score.innerText);
       let message;
-      if (finalScore >= 20) {
+      if (finalScore >= 25) {
         message = winningMessages[Math.floor(Math.random() * winningMessages.length)];
         // Confetti effect for win
         if (typeof launchConfetti === 'function') launchConfetti();
@@ -227,11 +240,9 @@ function createDrop() {
   // Remove drops that reach the bottom (weren't clicked)
   drop.addEventListener("animationend", () => {
     drop.remove(); // Clean up drops that weren't caught
-    try { sounds.miss.play(); } catch {}
   });
   baddrop.addEventListener("animationend", () => {
     baddrop.remove(); // Clean up drops that weren't caught
-    try { sounds.miss.play(); } catch {}
   });
   bombdrop.addEventListener("animationend", () => {
     bombdrop.remove();
@@ -240,18 +251,32 @@ function createDrop() {
   baddrop.addEventListener("click", () => {
     baddrop.remove(); // Remove drop when clicked
     setScore(parseInt(score.innerText) - 1); // Decrement score, but setScore will prevent negative
-    try { sounds.miss.play(); } catch {}
   });
   // When a drop is clicked, remove it and increase the score
   drop.addEventListener("click", () => {
     drop.remove(); // Remove drop when clicked
     setScore(parseInt(score.innerText) + 1); // Increment score
-    try { sounds.catch.play(); } catch {}
   });
-  // Bomb drop click: lose 5 points and play sound
+  // Bomb drop click: game over screen
   bombdrop.addEventListener("click", () => {
     bombdrop.remove();
-    setScore(parseInt(score.innerText) - 5);
-    try { sounds.bomb.play(); } catch {}
+    gameRunning = false;
+    if (dropMaker) {
+      clearInterval(dropMaker);
+      dropMaker = null;
+    }
+    if (countdownInterval) {
+      clearInterval(countdownInterval);
+      countdownInterval = null;
+    }
+    // Remove all drops
+    const drops = document.getElementsByClassName("water-drop");
+    while (drops[0]) drops[0].parentNode.removeChild(drops[0]);
+    // Show game over screen
+    setTimeout(() => {
+      alert("💣 Game Over! You clicked a bomb!\nFinal score: " + score.innerText);
+      setScore("0");
+      timer.innerText = "0";
+    }, 100);
   });
 }
