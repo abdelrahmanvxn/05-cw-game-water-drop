@@ -40,8 +40,32 @@ function setScore(val) {
 }
 
 // Wait for button click to start the game
+
 document.getElementById("start-btn").addEventListener("click", startGame);
 document.getElementById("reset-btn").addEventListener("click", resetGame);
+
+
+// Improved: Only prevent scrolling for vertical swipes, not taps/clicks
+const gameContainer = document.getElementById("game-container");
+let touchStartY = null;
+gameContainer.addEventListener("touchstart", function(e) {
+  if (e.touches.length === 1) {
+    touchStartY = e.touches[0].clientY;
+  }
+}, { passive: true });
+gameContainer.addEventListener("touchmove", function(e) {
+  if (touchStartY !== null) {
+    const touchCurrentY = e.touches[0].clientY;
+    const deltaY = Math.abs(touchCurrentY - touchStartY);
+    // Only prevent default if it's a vertical swipe (not a tap)
+    if (deltaY > 10) {
+      e.preventDefault();
+    }
+  }
+}, { passive: false });
+gameContainer.addEventListener("touchend", function() {
+  touchStartY = null;
+});
 
 
 function resetGame() {
@@ -133,15 +157,31 @@ function createDrop() {
   // Create a new div element that will be our water drop
   const drop = document.createElement("div");
   const baddrop = document.createElement("div");
+  const bombdrop = document.createElement("div");
   drop.className = "water-drop";
   baddrop.className = "water-drop bad-drop";
+  bombdrop.className = "water-drop bomb-drop";
+  bombdrop.innerText = '💣';
+  // Limit number of drops on screen
+  const maxDrops = 15;
+  const allDrops = document.querySelectorAll('.water-drop');
+  if (allDrops.length >= maxDrops) {
+    // Remove oldest drop(s) to keep performance smooth
+    for (let i = 0; i < allDrops.length - maxDrops + 1; i++) {
+      allDrops[i].remove();
+    }
+  }
 
-  // Make drops different sizes for visual variety
+
+  // Make drops different sizes for visual variety, but increase minimum size
   const initialSize = 60;
-  const sizeMultiplier = Math.random() * 0.8 + 0.5;
+  const minMultiplier = 0.95; // was 0.5, now 0.95 for bigger minimum
+  const maxMultiplier = 1.2; // allow slightly bigger max
+  const sizeMultiplier = Math.random() * (maxMultiplier - minMultiplier) + minMultiplier;
   const size = initialSize * sizeMultiplier;
   drop.style.width = drop.style.height = `${size}px`;
   baddrop.style.width = baddrop.style.height = `${size}px`;
+  bombdrop.style.width = bombdrop.style.height = `${size}px`;
 
   // Position the drop randomly across the game width
   // Subtract 60 pixels to keep drops fully inside the container
@@ -150,15 +190,21 @@ function createDrop() {
   drop.style.left = xPosition + "px";
   baddrop.style.left = Math.random() * (gameWidth - 60) + "px";
   baddrop.style.top = "-60px";
+  bombdrop.style.left = Math.random() * (gameWidth - 60) + "px";
+  bombdrop.style.top = "-60px";
 
-  // Make drops fall for 2 seconds (faster animation)
-  // On small screens, slow down drop speed for playability
-  let dropDuration = "2s";
+  // Each drop gets its own dynamic speed
+  let dropDuration;
   if (window.innerWidth <= 600) {
-    dropDuration = "3.2s";
+    // Mobile: 1.5s to 3.2s
+    dropDuration = (Math.random() * (3.2 - 1.5) + 1.5).toFixed(2) + "s";
+  } else {
+    // PC: 1s to 2s
+    dropDuration = (Math.random() * (2 - 1) + 1).toFixed(2) + "s";
   }
   drop.style.animationDuration = dropDuration;
   baddrop.style.animationDuration = dropDuration;
+  bombdrop.style.animationDuration = dropDuration;
 
   // The dropFall keyframes should be defined in your CSS file, not here.
 
@@ -166,29 +212,46 @@ function createDrop() {
   const gameContainer = document.getElementById("game-container");
   gameContainer.appendChild(drop);
   gameContainer.appendChild(baddrop);
+  // 1 in 6 chance to spawn a bomb drop
+  if (Math.random() < 0.17) {
+    gameContainer.appendChild(bombdrop);
+  }
   // Prevent default mouse events on drops
   drop.addEventListener("mousedown", function(e) { e.preventDefault(); });
   drop.addEventListener("dragstart", function(e) { e.preventDefault(); });
   baddrop.addEventListener("mousedown", function(e) { e.preventDefault(); });
   baddrop.addEventListener("dragstart", function(e) { e.preventDefault(); });
+  bombdrop.addEventListener("mousedown", function(e) { e.preventDefault(); });
+  bombdrop.addEventListener("dragstart", function(e) { e.preventDefault(); });
 
   // Remove drops that reach the bottom (weren't clicked)
   drop.addEventListener("animationend", () => {
     drop.remove(); // Clean up drops that weren't caught
+    try { sounds.miss.play(); } catch {}
   });
-
   baddrop.addEventListener("animationend", () => {
     baddrop.remove(); // Clean up drops that weren't caught
+    try { sounds.miss.play(); } catch {}
+  });
+  bombdrop.addEventListener("animationend", () => {
+    bombdrop.remove();
   });
 
   baddrop.addEventListener("click", () => {
-  baddrop.remove(); // Remove drop when clicked
-  setScore(parseInt(score.innerText) - 1); // Decrement score, but setScore will prevent negative
+    baddrop.remove(); // Remove drop when clicked
+    setScore(parseInt(score.innerText) - 1); // Decrement score, but setScore will prevent negative
+    try { sounds.miss.play(); } catch {}
   });
-
   // When a drop is clicked, remove it and increase the score
   drop.addEventListener("click", () => {
     drop.remove(); // Remove drop when clicked
     setScore(parseInt(score.innerText) + 1); // Increment score
+    try { sounds.catch.play(); } catch {}
+  });
+  // Bomb drop click: lose 5 points and play sound
+  bombdrop.addEventListener("click", () => {
+    bombdrop.remove();
+    setScore(parseInt(score.innerText) - 5);
+    try { sounds.bomb.play(); } catch {}
   });
 }
