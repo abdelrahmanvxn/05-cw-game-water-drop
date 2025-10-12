@@ -1,25 +1,43 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Water Drop Game</title>
+    <title>Charity: Water Drop</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="game-wrapper">
-        <h1 class="game-title">Water Drop</h1>
-        <p class="game-tagline">Catch the good drops, avoid the bad ones!</p>
-        <div class="score-panel">
-            <div class="score">Score: <span id="score">0</span></div>
-            <div class="timer">Time: <span id="time">30</span>s</div>
-            <button id="start-btn">Start Game</button>
+    <div class="main-layout">
+        <div class="game-wrapper">
+            <div class="brand-logo-box">
+                <img src="img/water-can.png" alt="Charity: water logo">
+            </div>
+            <h1 class="game-title">Charity: Water Drop</h1>
+            <div class="score-panel">
+                <div class="score-bar-wrapper">
+                    <div class="score-bar-bg">
+                        <div class="score-bar-fill" id="score-bar-fill" style="width: 0%;"></div>
+                        <span class="score-bar-label" id="score-bar-label">0%</span>
+                    </div>
+                </div>
+                <div class="stats-row">
+                    <div class="score">Score: <span id="score">0</span></div>
+                    <div class="timer">Time: <span id="timer">0</span>s</div>
+                </div>
+                <div class="button-row">
+                    <button id="start-btn" class="main-btn">Start Game</button>
+                    <button id="reset-btn" class="main-btn">Reset</button>
+                </div>
+                <a href="https://www.charitywater.org/donate" target="_blank" class="donate-btn">
+                    <img src="img/cw_logo-horizontal.png" alt="Charity: water logo">
+                    Donate
+                </a>
+            </div>
         </div>
-        
-        <div id="game-container">
-        </div>
+        <div id="game-container"></div>
     </div>
-    
     <script src="script.js"></script>
+    <script src="confetti.js"></script>
 </body>
 </html>
