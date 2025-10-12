@@ -152,8 +152,13 @@ function createDrop() {
   baddrop.style.top = "-60px";
 
   // Make drops fall for 2 seconds (faster animation)
-  drop.style.animationDuration = "2s";
-  baddrop.style.animationDuration = "2s";
+  // On small screens, slow down drop speed for playability
+  let dropDuration = "2s";
+  if (window.innerWidth <= 600) {
+    dropDuration = "3.2s";
+  }
+  drop.style.animationDuration = dropDuration;
+  baddrop.style.animationDuration = dropDuration;
 
   // The dropFall keyframes should be defined in your CSS file, not here.
 
