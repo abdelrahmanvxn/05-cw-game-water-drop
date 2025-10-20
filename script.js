@@ -135,10 +135,31 @@ const sounds = {
   red: null,
   bomb: null
 };
+
+// Compute a robust base for sound files. Use document.baseURI when available so
+// assets resolve correctly whether the site is served from a repo subpath
+// (GitHub Pages project site) or the site root.
+const SOUND_BASE = (function() {
+  try {
+    return document.baseURI || window.location.href;
+  } catch (e) {
+    return window.location.href;
+  }
+})();
+
+function soundPath(relPath) {
+  try {
+    return new URL(relPath, SOUND_BASE).toString();
+  } catch (e) {
+    // Fallback: return the relative path as-is
+    return relPath;
+  }
+}
+
 try {
-  sounds.blue = new Audio('sound/blue_drop.mp3');
-  sounds.red = new Audio('sound/red_drop.mp3');
-  sounds.bomb = new Audio('sound/bomb_explosion.mp3');
+  sounds.blue = new Audio(soundPath('sound/blue_drop.mp3'));
+  sounds.red = new Audio(soundPath('sound/red_drop.mp3'));
+  sounds.bomb = new Audio(soundPath('sound/bomb_explosion.mp3'));
   // set default volumes
   sounds.blue.volume = 0.9;
   sounds.red.volume = 0.9;
@@ -148,9 +169,9 @@ try {
 }
 
 // Quick check: verify one of the audio files is reachable; if not, log guidance for GitHub Pages
-fetch('sound/blue_drop.mp3', { method: 'HEAD' }).then(resp => {
+fetch(soundPath('sound/blue_drop.mp3'), { method: 'HEAD' }).then(resp => {
   if (!resp.ok) {
-    console.warn('Audio file sound/blue_drop.mp3 not found (status ' + resp.status + '). If you host on GitHub Pages under a repo path, ensure the sound files are deployed to "sound/" relative to the HTML, or change the paths in script.js to include the repo base path.');
+    console.warn('Audio file ' + soundPath('sound/blue_drop.mp3') + ' not found (status ' + resp.status + '). If you host on GitHub Pages under a repo path, ensure the sound files are deployed to the same relative path as the HTML, or update the paths in script.js to include the repo base path.');
   }
 }).catch(() => {
   // ignore fetch errors
