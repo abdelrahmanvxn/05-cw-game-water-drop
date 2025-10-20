@@ -1,8 +1,7 @@
-
 /* Charity: water Brand Colors & Fonts */
 :root {
-  --cw-yellow: #FFC907;
-  --cw-blue: #2E9DF7;
+  --cw-yellow: #FFC907; /* Pantone 114 U */
+  --cw-blue: #2E9DF7;   /* Pantone 2925 U */
   --cw-light-blue: #8BD1CB;
   --cw-green: #4FCB53;
   --cw-orange: #FF902A;
@@ -16,8 +15,9 @@
 * { box-sizing: border-box; }
 body {
   background: linear-gradient(135deg, var(--cw-bg) 0%, var(--cw-light-blue) 100%);
-  font-family: 'Avenir', 'Proxima Nova', Arial, sans-serif;
-  color: #222;
+  /* Brand font stack: Proxima Nova primary, Avenir fallback, Georgia for serif use */
+  font-family: 'Proxima Nova', 'Avenir', Georgia, Arial, sans-serif;
+  color: #222; /* keep readable body text */
   margin: 0;
   min-height: 100vh;
   max-width: 100vw;
@@ -72,10 +72,24 @@ body {
   display: block;
 }
 
+/* Mute button positioned near top-right of the panel */
+.mute-btn {
+  position: absolute;
+  right: 18px;
+  top: 18px;
+  background: transparent;
+  border: 2px solid rgba(0,0,0,0.06);
+  border-radius: 12px;
+  padding: 6px 8px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+.mute-btn[aria-pressed="true"] { background: rgba(0,0,0,0.06); }
+
 .game-title {
   font-size: 2.5rem;
   font-weight: 900;
-  color: #222;
+  color: #111;
   margin-bottom: 8px;
   text-align: center;
   width: 100%;
@@ -128,13 +142,13 @@ body {
 }
 .score-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--cw-yellow) 0%, #FFD84A 100%);
+  background: var(--cw-yellow);
   border-radius: 16px 0 0 16px;
   transition: width 0.5s cubic-bezier(0.4,2,0.3,1);
   position: absolute;
   left: 0;
   top: 0;
-  box-shadow: 0 2px 12px #FFD84A88 inset, 0 0 8px var(--cw-yellow);
+  box-shadow: 0 2px 12px rgba(255,201,7,0.53) inset;
   animation: scoreBarPulse 1.5s ease infinite alternate;
 }
 @keyframes scoreBarPulse {
@@ -151,7 +165,7 @@ body {
   color: #000;
   text-shadow: 0 1px 2px #fff, 0 2px 8px rgba(255,201,7,0.533);
   letter-spacing: 0.7px;
-  font-family: 'Avenir', 'Proxima Nova', Arial, sans-serif;
+  font-family: 'Proxima Nova', 'Avenir', Georgia, Arial, sans-serif;
 }
 .stats-row {
   display: flex;
@@ -187,56 +201,187 @@ body {
   padding: 18px 0;
   margin: 0;
   font-size: 1.2rem;
-  font-family: 'Avenir', 'Proxima Nova', Arial, sans-serif;
+  font-family: 'Proxima Nova', 'Avenir', Georgia, Arial, sans-serif;
   font-weight: 900;
-  color: #222;
-  text-shadow: 0 1px 2px #fff, 0 2px 8px var(--cw-yellow)88;
+  color: #111;
   letter-spacing: 0.7px;
-  background: linear-gradient(90deg, var(--cw-yellow) 60%, #FFD84A 100%);
+  background: var(--cw-yellow);
   border: none;
   border-radius: 32px;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(255,201,7,0.267);
-  transition: background 0.2s, transform 0.1s;
+  box-shadow: none;
+  transition: transform 0.08s ease, border-color 0.08s ease;
   outline: none;
   display: inline-block;
   width: auto;
   text-align: center;
 }
-#start-btn:hover, #reset-btn:hover {
-  background: linear-gradient(90deg, var(--cw-blue) 60%, var(--cw-yellow) 100%);
+#difficulty {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 2px solid var(--cw-yellow);
+  background: #fff;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  outline: none;
+}
+.difficulty-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 12px;
+}
+.difficulty-row label {
+  font-weight: 800;
+  color: #222;
+}
+
+.goal-row {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  margin-top: 8px;
+}
+.goal-label {
+  font-weight: 900;
+  color: var(--cw-dark-green);
+}
+#goal-value {
+  font-weight: 800;
+  color: #222;
+}
+
+/* Collected animation: shrink and fade */
+.water-drop.collected {
+  transform: scale(0.6) !important;
+  opacity: 0 !important;
+  transition: transform 260ms ease-out, opacity 260ms ease-out;
+  pointer-events: none;
+}
+
+/* Bomb explosion visual */
+.bomb-drop.exploded {
+  transform: scale(1.6) !important;
+  opacity: 0 !important;
+  transition: transform 320ms ease-out, opacity 320ms ease-out;
+  filter: drop-shadow(0 6px 12px rgba(0,0,0,0.45));
+  pointer-events: none;
+}
+
+/* Floating score indicator shown when collecting/losing points */
+.floating-score {
+  position: absolute;
+  pointer-events: none;
+  font-weight: 900;
+  font-size: 1.1rem;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  transform: translateY(0) scale(1);
+  opacity: 1;
+  transition: transform 700ms ease-out, opacity 700ms ease-out;
+}
+
+@keyframes floatUp {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(-42px) scale(1.08); opacity: 0; }
+}
+
+.floating-score.up {
+  animation: floatUp 700ms ease-out forwards;
+}
+
+/* Milestone message style */
+.milestone-msg {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 16px;
+  background: rgba(0,0,0,0.8);
   color: #fff;
-  transform: scale(1.06);
-  box-shadow: 0 4px 24px var(--cw-yellow), 0 1px 4px #fff inset;
+  padding: 10px 16px;
+  border-radius: 20px;
+  font-weight: 800;
+  z-index: 9999;
+  opacity: 1;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.milestone-msg.hide { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+
+/* Footer with charity links */
+.site-footer {
+  width: 100%;
+  background: linear-gradient(90deg, rgba(255,255,255,0.9), rgba(255,255,255,0.6));
+  border-top: 2px solid var(--cw-yellow);
+  padding: 12px 0;
+  position: relative;
+}
+.footer-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px;
+}
+.footer-links {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: nowrap; /* keep logo, wordmark and Donate on one line when space permits */
+}
+.footer-links a {
+  color: #111; /* near-black for strong, readable wordmark */
+  font-weight: 800;
+  text-decoration: none;
+  background: transparent; /* no gradients */
+  font-family: 'Proxima Nova', 'Avenir', Georgia, Arial, sans-serif;
+  margin: 0; /* spacing handled by gap on parent */
+}
+.footer-links a:hover { text-decoration: underline; color: #000; }
+.logo-link { display: inline-flex; align-items: center; gap: 12px; }
+.footer-logo { height: 36px; width: auto; display: block; }
+
+@media (max-width: 900px) {
+  .footer-logo { height: 30px; }
+}
+
+@media (max-width: 600px) {
+  .footer-logo { height: 24px; }
+}
+.footer-credit { color: #666; font-size: 0.95rem; font-weight: 700; }
+
+@media (max-width: 900px) {
+  .footer-inner { flex-direction: column; gap: 8px; text-align: center; }
+  .footer-links { flex-wrap: wrap; justify-content: center; gap: 12px; }
+}
+#start-btn:hover, #reset-btn:hover {
+  transform: translateY(-2px) scale(1.01);
+  border-color: rgba(0,0,0,0.12);
 }
 .donate-btn {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  background: linear-gradient(90deg, var(--cw-yellow) 60%, #FFD84A 100%);
-  color: #222;
-  border-radius: 32px;
-  font-family: 'Avenir', 'Proxima Nova', Arial, sans-serif;
-  font-weight: 900;
+  background: var(--cw-yellow);
+  color: #111; /* near-black for high contrast */
+  border-radius: 28px;
+  font-family: 'Proxima Nova', 'Avenir', Georgia, Arial, sans-serif;
+  font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 2px 16px rgba(255,201,7,0.267), 0 1px 4px #fff inset;
-  transition: background 0.2s, color 0.2s, transform 0.1s, box-shadow 0.2s;
+  box-shadow: none; /* keep flat */
+  transition: transform 0.06s ease, border-color 0.06s ease;
   outline: none;
-  font-size: 1.2rem;
-  padding: 14px 32px;
-  margin-top: 32px;
-  border: 2px solid var(--cw-yellow);
+  font-size: 1.05rem;
+  padding: 12px 26px;
+  margin-top: 24px;
+  border: 2px solid rgba(0,0,0,0.06);
 }
-.donate-btn img {
-  height: 32px;
-  width: auto;
-  filter: none;
-}
+.donate-logo { height: 28px; width: auto; display: block; }
+.donate-text { margin-left: 6px; }
 .donate-btn:hover {
-  background: linear-gradient(90deg, var(--cw-blue) 60%, var(--cw-yellow) 100%);
-  color: #fff;
-  transform: scale(1.06);
-  box-shadow: 0 4px 24px var(--cw-yellow), 0 1px 4px #fff inset;
+  border-color: rgba(0,0,0,0.12);
+  transform: translateY(-1px);
 }
 #game-container {
   width: 700px;
@@ -269,6 +414,22 @@ body {
   box-shadow: 0 2px 12px rgba(46,157,247,0.667), 0 1px 4px #fff inset;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+}
+.water-drop, .bad-drop, .bomb-drop {
+  /* Improve touch targets: keep visuals the same but expand hit area via a pseudo-element */
+  touch-action: manipulation;
+}
+
+/* Invisible larger hit area so taps are easier on touch screens */
+.water-drop::after, .bad-drop::after, .bomb-drop::after {
+  content: '';
+  position: absolute;
+  left: -12px;
+  top: -12px;
+  right: -12px;
+  bottom: -12px;
+  /* leave transparent, but allow pointer events to target this element's area */
+  background: transparent;
 }
 .water-drop:hover {
   transform: scale(1.18);

@@ -3,6 +3,69 @@ let gameRunning = false; // Keeps track of whether game is active or not
 
 let dropMaker; // Will store our timer that creates drops regularly
 let countdownInterval; // Track countdown interval globally
+// Difficulty settings will be populated from the selector
+const difficultySelect = document.getElementById('difficulty');
+// Default difficulty config
+const DIFFICULTY_CONFIG = {
+  easy: {
+    time: 45,
+    winScore: 15,
+    dropInterval: 800,
+    maxDrops: 12,
+    bombChance: 0.08,
+    sizeMultRange: [0.95, 1.08],
+    speedRangeMobile: [1.8, 3.6],
+    speedRangeDesktop: [1.2, 2.2]
+  },
+  normal: {
+    time: 30,
+    winScore: 25,
+    dropInterval: 600,
+    maxDrops: 15,
+    bombChance: 0.17,
+    sizeMultRange: [0.95, 1.2],
+    speedRangeMobile: [1.5, 3.2],
+    speedRangeDesktop: [1.0, 2.0]
+  },
+  hard: {
+    time: 20,
+    winScore: 35,
+    dropInterval: 420,
+    maxDrops: 20,
+    bombChance: 0.26,
+    sizeMultRange: [0.9, 1.18],
+    speedRangeMobile: [1.2, 3.8],
+    speedRangeDesktop: [0.8, 1.8]
+  }
+};
+
+function getDifficulty() {
+  const val = (difficultySelect && difficultySelect.value) ? difficultySelect.value : 'normal';
+  return DIFFICULTY_CONFIG[val] || DIFFICULTY_CONFIG['normal'];
+}
+
+// Update the goal label in the UI to reflect current difficulty
+const goalValueEl = document.getElementById('goal-value');
+function updateGoalLabel() {
+  const diff = getDifficulty();
+  if (goalValueEl) {
+    goalValueEl.innerText = `Reach ${diff.winScore} points`;
+  }
+}
+
+// Listen for difficulty changes and update goal label live
+if (difficultySelect) {
+  difficultySelect.addEventListener('change', () => {
+    updateGoalLabel();
+    // If timer is not running, also update the timer display to reflect new difficulty
+    if (!gameRunning && timer) {
+      timer.innerText = String(getDifficulty().time);
+    }
+  });
+}
+
+// Initialize label on load
+updateGoalLabel();
 
 let score = document.getElementById("score");
 // Winning and losing messages
@@ -21,6 +84,106 @@ const losingMessages = [
   "So close! Try once more."
 ];
 let timer = document.getElementById("timer");
+
+// Milestones: array of {score, msg}. Add or modify messages here.
+let MILESTONE_DEFS = [
+  { score: 5, msg: 'Nice start!' },
+  { score: 10, msg: 'Halfway there!' },
+  { score: 20, msg: 'Great run!' }
+];
+let shownMilestones = new Set();
+
+function showMilestone(message) {
+  try {
+    const el = document.createElement('div');
+    el.className = 'milestone-msg';
+    el.innerText = message;
+    // position inside game-wrapper so it stays visible
+    const wrapper = document.querySelector('.game-wrapper') || document.body;
+    wrapper.appendChild(el);
+    // auto-hide after 2.5s
+    setTimeout(() => {
+      el.classList.add('hide');
+      setTimeout(() => el.remove(), 400);
+    }, 2500);
+  } catch (e) {
+    console.warn('Milestone display failed', e);
+  }
+}
+
+function checkMilestones(currentScore) {
+  // Recompute dynamic milestones if needed (for example based on winScore)
+  const winScore = getDifficulty().winScore;
+  // Ensure a 'halfway' milestone if not already present
+  const halfway = Math.ceil(winScore / 2);
+  const defs = MILESTONE_DEFS.slice();
+  if (!defs.some(d => d.score === halfway)) {
+    defs.push({ score: halfway, msg: 'Halfway there!' });
+  }
+  // Sort by score ascending
+  defs.sort((a, b) => a.score - b.score);
+  for (const d of defs) {
+    if (currentScore >= d.score && !shownMilestones.has(d.score)) {
+      shownMilestones.add(d.score);
+      showMilestone(d.msg);
+    }
+  }
+}
+
+// Preload sounds (paths from the user's request). Files may be .mp3 — we'll try both where appropriate.
+const sounds = {
+  blue: null,
+  red: null,
+  bomb: null
+};
+try {
+  sounds.blue = new Audio('/sound/blue_drop.mp3');
+  sounds.red = new Audio('/sound/red_drop.mp3');
+  sounds.bomb = new Audio('/sound/bomb_explosion.mp3');
+  // set default volumes
+  sounds.blue.volume = 0.9;
+  sounds.red.volume = 0.9;
+  sounds.bomb.volume = 0.9;
+} catch (e) {
+  // audio may fail to instantiate in some environments — fail silently
+  console.warn('Audio preload failed', e);
+}
+
+function playSound(name) {
+  try {
+    // Respect mute setting
+    const isMuted = window.localStorage && window.localStorage.getItem('cw_muted') === '1';
+    if (isMuted) return;
+    const s = sounds[name];
+    if (s) {
+      // clone node to allow overlapping sounds
+      const node = s.cloneNode(true);
+      node.play().catch(() => {});
+    }
+  } catch (e) {
+    // ignore audio play errors
+  }
+}
+
+// Mute button wiring
+const muteBtn = document.getElementById('mute-btn');
+function updateMuteUI() {
+  const muted = window.localStorage && window.localStorage.getItem('cw_muted') === '1';
+  if (muteBtn) {
+    muteBtn.setAttribute('aria-pressed', muted ? 'true' : 'false');
+    muteBtn.querySelector('.mute-icon').innerText = muted ? '🔇' : '🔊';
+  }
+}
+if (muteBtn) {
+  // initialize
+  if (!window.localStorage.getItem('cw_muted')) window.localStorage.setItem('cw_muted', '0');
+  updateMuteUI();
+  muteBtn.addEventListener('click', () => {
+    const muted = window.localStorage.getItem('cw_muted') === '1';
+    window.localStorage.setItem('cw_muted', muted ? '0' : '1');
+    updateMuteUI();
+  });
+}
 // Update score bar when score changes
 function updateScoreBar() {
   const scoreValue = parseInt(score.innerText);
@@ -37,6 +200,8 @@ function setScore(val) {
     const safeVal = Math.max(0, parseInt(val));
     score.innerText = safeVal;
     updateScoreBar();
+  // Check and show milestones
+  if (gameRunning) checkMilestones(safeVal);
 }
 
 // Wait for button click to start the game
@@ -73,14 +238,15 @@ function resetGame() {
   gameRunning = false;
 let gameContainer = document.getElementById("game-container");
 const IS_MOBILE = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 600;
-const DROP_INTERVAL = IS_MOBILE ? 450 : 350;
-const MAX_BALLS = IS_MOBILE ? 7 : 15;
-const DROP_SIZE = IS_MOBILE ? 56 : 64;
-const DROP_MIN_MULT = 0.95;
-const DROP_MAX_MULT = IS_MOBILE ? 1.12 : 1.18;
-const DROP_SPEED_MIN = IS_MOBILE ? 1.5 : 1.0;
-const DROP_SPEED_MAX = IS_MOBILE ? 3.2 : 2.0;
-const BOMB_CHANCE = 0.17;
+// Use difficulty settings to set timer and other globals
+const diff = getDifficulty();
+const DROP_INTERVAL = IS_MOBILE ? diff.dropInterval : diff.dropInterval;
+const MAX_BALLS = IS_MOBILE ? Math.max(7, diff.maxDrops) : diff.maxDrops;
+const DROP_MIN_MULT = diff.sizeMultRange[0];
+const DROP_MAX_MULT = diff.sizeMultRange[1];
+const DROP_SPEED_MIN = IS_MOBILE ? diff.speedRangeMobile[0] : diff.speedRangeDesktop[0];
+const DROP_SPEED_MAX = IS_MOBILE ? diff.speedRangeMobile[1] : diff.speedRangeDesktop[1];
+const BOMB_CHANCE = diff.bombChance;
 const BAD_DROP_CLASS = "bad-drop";
 const WATER_DROP_CLASS = "water-drop";
 const BOMB_DROP_CLASS = "bomb-drop";
@@ -99,7 +265,8 @@ const BOMB_DROP_CLASS = "bomb-drop";
   }
   // Reset score and timer
   setScore("0");
-  timer.innerText = "30";
+  // Set timer according to difficulty
+  timer.innerText = String(getDifficulty().time);
   // Start the game immediately
   startGame();
 }
@@ -116,14 +283,16 @@ function startGame() {
 
   gameRunning = true;
 
-  // Create new drops every second (1000 milliseconds)
-  dropMaker = setInterval(createDrop, 600);
+  // Create new drops according to difficulty interval
+  if (dropMaker) { clearInterval(dropMaker); dropMaker = null; }
+  const diff = getDifficulty();
+  dropMaker = setInterval(createDrop, diff.dropInterval);
 
   // Set initial score
   setScore("0");
 
   // Set initial timer value
-  timer.innerText = "30";
+  timer.innerText = String(getDifficulty().time);
 
 
   // Add a timer function to handle countdown and game over
@@ -148,7 +317,8 @@ function startGame() {
       // Show winning or try again message
       const finalScore = parseInt(score.innerText);
       let message;
-      if (finalScore >= 25) {
+      const winScore = getDifficulty().winScore;
+      if (finalScore >= winScore) {
         message = winningMessages[Math.floor(Math.random() * winningMessages.length)];
         // Confetti effect for win
         if (typeof launchConfetti === 'function') launchConfetti();
@@ -176,20 +346,19 @@ function createDrop() {
   bombdrop.className = "water-drop bomb-drop";
   bombdrop.innerText = '💣';
   // Limit number of drops on screen
-  const maxDrops = 15;
+  // Limit number of drops on screen
   const allDrops = document.querySelectorAll('.water-drop');
-  if (allDrops.length >= maxDrops) {
+  if (typeof MAX_BALLS !== 'undefined' && allDrops.length >= MAX_BALLS) {
     // Remove oldest drop(s) to keep performance smooth
-    for (let i = 0; i < allDrops.length - maxDrops + 1; i++) {
+    for (let i = 0; i < allDrops.length - MAX_BALLS + 1; i++) {
       allDrops[i].remove();
     }
   }
 
-
-  // Make drops different sizes for visual variety, but increase minimum size
+  // Make drops different sizes for visual variety using difficulty multipliers
   const initialSize = 60;
-  const minMultiplier = 0.95; // was 0.5, now 0.95 for bigger minimum
-  const maxMultiplier = 1.2; // allow slightly bigger max
+  const minMultiplier = (typeof DROP_MIN_MULT !== 'undefined') ? DROP_MIN_MULT : 0.95;
+  const maxMultiplier = (typeof DROP_MAX_MULT !== 'undefined') ? DROP_MAX_MULT : 1.2;
   const sizeMultiplier = Math.random() * (maxMultiplier - minMultiplier) + minMultiplier;
   const size = initialSize * sizeMultiplier;
   drop.style.width = drop.style.height = `${size}px`;
@@ -206,15 +375,10 @@ function createDrop() {
   bombdrop.style.left = Math.random() * (gameWidth - 60) + "px";
   bombdrop.style.top = "-60px";
 
-  // Each drop gets its own dynamic speed
-  let dropDuration;
-  if (window.innerWidth <= 600) {
-    // Mobile: 1.5s to 3.2s
-    dropDuration = (Math.random() * (3.2 - 1.5) + 1.5).toFixed(2) + "s";
-  } else {
-    // PC: 1s to 2s
-    dropDuration = (Math.random() * (2 - 1) + 1).toFixed(2) + "s";
-  }
+  // Each drop gets its own dynamic speed based on difficulty ranges
+  const speedMin = (typeof DROP_SPEED_MIN !== 'undefined') ? DROP_SPEED_MIN : (window.innerWidth <= 600 ? 1.5 : 1.0);
+  const speedMax = (typeof DROP_SPEED_MAX !== 'undefined') ? DROP_SPEED_MAX : (window.innerWidth <= 600 ? 3.2 : 2.0);
+  const dropDuration = (Math.random() * (speedMax - speedMin) + speedMin).toFixed(2) + "s";
   drop.style.animationDuration = dropDuration;
   baddrop.style.animationDuration = dropDuration;
   bombdrop.style.animationDuration = dropDuration;
@@ -225,58 +389,101 @@ function createDrop() {
   const gameContainer = document.getElementById("game-container");
   gameContainer.appendChild(drop);
   gameContainer.appendChild(baddrop);
-  // 1 in 6 chance to spawn a bomb drop
-  if (Math.random() < 0.17) {
+  // Spawn bomb drop according to difficulty bomb chance
+  const bombChanceLocal = (typeof BOMB_CHANCE !== 'undefined') ? BOMB_CHANCE : 0.17;
+  if (Math.random() < bombChanceLocal) {
     gameContainer.appendChild(bombdrop);
   }
   // Prevent default mouse events on drops
-  drop.addEventListener("mousedown", function(e) { e.preventDefault(); });
-  drop.addEventListener("dragstart", function(e) { e.preventDefault(); });
-  baddrop.addEventListener("mousedown", function(e) { e.preventDefault(); });
-  baddrop.addEventListener("dragstart", function(e) { e.preventDefault(); });
-  bombdrop.addEventListener("mousedown", function(e) { e.preventDefault(); });
-  bombdrop.addEventListener("dragstart", function(e) { e.preventDefault(); });
+  // Use pointer events so touch works reliably. Prevent drag default.
+  ['pointerdown','mousedown'].forEach(evt => {
+    drop.addEventListener(evt, function(e) { e.preventDefault(); });
+    baddrop.addEventListener(evt, function(e) { e.preventDefault(); });
+    bombdrop.addEventListener(evt, function(e) { e.preventDefault(); });
+  });
+  ['dragstart'].forEach(evt => {
+    drop.addEventListener(evt, function(e) { e.preventDefault(); });
+    baddrop.addEventListener(evt, function(e) { e.preventDefault(); });
+    bombdrop.addEventListener(evt, function(e) { e.preventDefault(); });
+  });
 
   // Remove drops that reach the bottom (weren't clicked)
   drop.addEventListener("animationend", () => {
     drop.remove(); // Clean up drops that weren't caught
   });
   baddrop.addEventListener("animationend", () => {
-    baddrop.remove(); // Clean up drops that weren't caught
+    if (!baddrop.dataset.collected) baddrop.remove(); // Clean up drops that weren't caught
   });
   bombdrop.addEventListener("animationend", () => {
-    bombdrop.remove();
+    if (!bombdrop.dataset.collected) bombdrop.remove();
   });
 
-  baddrop.addEventListener("click", () => {
-    baddrop.remove(); // Remove drop when clicked
-    setScore(parseInt(score.innerText) - 1); // Decrement score, but setScore will prevent negative
+  // Use pointerdown for immediate response on touch and mouse.
+  const showFloating = (x, y, text, color) => {
+    const el = document.createElement('div');
+    el.className = 'floating-score up';
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+    el.style.color = color || '#0a0';
+    el.innerText = text;
+    document.getElementById('game-container').appendChild(el);
+    setTimeout(() => el.remove(), 800);
+  };
+
+  baddrop.addEventListener('pointerdown', (ev) => {
+    // prevent double handling
+    if (baddrop.dataset.collected) return;
+    baddrop.dataset.collected = '1';
+  // play collect animation
+    baddrop.classList.add('collected');
+  // play red (bad) sound
+  playSound('red');
+    const rect = baddrop.getBoundingClientRect();
+    showFloating(rect.left + rect.width/2, rect.top, '-1', '#d33');
+    setTimeout(() => baddrop.remove(), 260);
+    setScore(parseInt(score.innerText) - 1);
   });
+
   // When a drop is clicked, remove it and increase the score
-  drop.addEventListener("click", () => {
-    drop.remove(); // Remove drop when clicked
-    setScore(parseInt(score.innerText) + 1); // Increment score
+  drop.addEventListener('pointerdown', (ev) => {
+    if (drop.dataset.collected) return;
+    drop.dataset.collected = '1';
+  drop.classList.add('collected');
+  // play blue (good) sound
+  playSound('blue');
+    const rect = drop.getBoundingClientRect();
+    showFloating(rect.left + rect.width/2, rect.top, '+1', '#0a8');
+    setTimeout(() => drop.remove(), 260);
+    setScore(parseInt(score.innerText) + 1);
   });
   // Bomb drop click: game over screen
-  bombdrop.addEventListener("click", () => {
-    bombdrop.remove();
-    gameRunning = false;
-    if (dropMaker) {
-      clearInterval(dropMaker);
-      dropMaker = null;
-    }
-    if (countdownInterval) {
-      clearInterval(countdownInterval);
-      countdownInterval = null;
-    }
-    // Remove all drops
-    const drops = document.getElementsByClassName("water-drop");
-    while (drops[0]) drops[0].parentNode.removeChild(drops[0]);
-    // Show game over screen
+  bombdrop.addEventListener('pointerdown', () => {
+    if (bombdrop.dataset.collected) return;
+    bombdrop.dataset.collected = '1';
+  // play bomb sound and explosion animation
+  playSound('bomb');
+    bombdrop.classList.add('exploded');
+    // small visual pop
     setTimeout(() => {
-      alert("💣 Game Over! You clicked a bomb!\nFinal score: " + score.innerText);
-      setScore("0");
-      timer.innerText = "0";
-    }, 100);
+      // proceed with game over
+      if (dropMaker) {
+        clearInterval(dropMaker);
+        dropMaker = null;
+      }
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+      }
+      gameRunning = false;
+      // Remove all drops
+      const drops = document.getElementsByClassName("water-drop");
+      while (drops[0]) drops[0].parentNode.removeChild(drops[0]);
+      // Show game over screen
+      setTimeout(() => {
+        alert("💣 Game Over! You clicked a bomb!\nFinal score: " + score.innerText);
+        setScore("0");
+        timer.innerText = "0";
+      }, 80);
+    }, 320);
   });
 }

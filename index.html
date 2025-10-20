@@ -13,6 +13,9 @@
             <div class="brand-logo-box">
                 <img src="img/water-can.png" alt="Charity: water logo">
             </div>
+            <button id="mute-btn" class="mute-btn" aria-pressed="false" aria-label="Mute sounds">
+                <span class="mute-icon">🔊</span>
+            </button>
             <h1 class="game-title">Charity: Water Drop</h1>
             <div class="score-panel">
                 <div class="score-bar-wrapper">
@@ -29,9 +32,21 @@
                     <button id="start-btn" class="main-btn">Start Game</button>
                     <button id="reset-btn" class="main-btn">Reset</button>
                 </div>
-                <a href="https://www.charitywater.org/donate" target="_blank" class="donate-btn">
-                    <img src="img/cw_logo-horizontal.png" alt="Charity: water logo">
-                    Donate
+                <div class="difficulty-row">
+                    <label for="difficulty">Difficulty</label>
+                    <select id="difficulty" name="difficulty">
+                        <option value="easy">Easy</option>
+                        <option value="normal" selected>Normal</option>
+                        <option value="hard">Hard</option>
+                    </select>
+                </div>
+                <div class="goal-row">
+                    <span class="goal-label">Goal:</span>
+                    <span id="goal-value">Reach 25 points</span>
+                </div>
+                <a href="https://www.charitywater.org/donate" target="_blank" class="donate-btn" aria-label="Donate to charity: water">
+                    <img src="img/cw_logo-horizontal.png" alt="charity: water" class="donate-logo">
+                    <span class="donate-text">Donate</span>
                 </a>
             </div>
         </div>
@@ -39,5 +54,17 @@
     </div>
     <script src="script.js"></script>
     <script src="confetti.js"></script>
+    <footer class="site-footer">
+        <div class="footer-inner">
+            <div class="footer-links">
+                <a href="https://www.charitywater.org/" target="_blank" rel="noopener" class="logo-link">
+                    <img src="img/water-can-transparent.png" alt="Jerry Can logo" class="footer-logo">
+                    <span>charity: water</span>
+                </a>
+                <a href="https://www.charitywater.org/donate" target="_blank" rel="noopener">Donate</a>
+            </div>
+            <div class="footer-credit">Built to raise awareness &middot; Learn more about charity: water</div>
+        </div>
+    </footer>
 </body>
 </html>
