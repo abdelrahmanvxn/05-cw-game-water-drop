@@ -130,24 +130,31 @@ function checkMilestones(currentScore) {
   }
 }
 
-// Preload sounds (paths from the user's request). Files may be .mp3 — we'll try both where appropriate.
 const sounds = {
   blue: null,
   red: null,
   bomb: null
 };
 try {
-  sounds.blue = new Audio('/sound/blue_drop.mp3');
-  sounds.red = new Audio('/sound/red_drop.mp3');
-  sounds.bomb = new Audio('/sound/bomb_explosion.mp3');
+  sounds.blue = new Audio('sound/blue_drop.mp3');
+  sounds.red = new Audio('sound/red_drop.mp3');
+  sounds.bomb = new Audio('sound/bomb_explosion.mp3');
   // set default volumes
   sounds.blue.volume = 0.9;
   sounds.red.volume = 0.9;
   sounds.bomb.volume = 0.9;
 } catch (e) {
-  // audio may fail to instantiate in some environments — fail silently
   console.warn('Audio preload failed', e);
 }
+
+// Quick check: verify one of the audio files is reachable; if not, log guidance for GitHub Pages
+fetch('sound/blue_drop.mp3', { method: 'HEAD' }).then(resp => {
+  if (!resp.ok) {
+    console.warn('Audio file sound/blue_drop.mp3 not found (status ' + resp.status + '). If you host on GitHub Pages under a repo path, ensure the sound files are deployed to "sound/" relative to the HTML, or change the paths in script.js to include the repo base path.');
+  }
+}).catch(() => {
+  // ignore fetch errors
+});
 
 function playSound(name) {
   try {
